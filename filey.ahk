@@ -1,15 +1,14 @@
-;Sunday, June 16, 2013
-;file.ahk
-;version 1.0
+;Sunday, March 06, 2016
+;filey.ahk
+;version 1.2
 ;an autohotkey library for common file functions
 ;File Class
 ;Path Class
-
 ;make sure core.ahk is loaded since it is required
-#include core.ahk
-
-;---------------FILE----------------------------------------------------
+;#include core.ahk
+;---------------FILEY----------------------------------------------------
 ;exist(whatfile)
+;open(whatfile)
 ;delete(whatfile)
 ;locked(whatfile)
 ;deletedir(whatdir, removecontents=0)
@@ -19,11 +18,9 @@
 ;copy(whatfile, whatdestination, overwrite=1)
 ;CopyEverything(SourcePattern, DestinationFolder, DoOverwrite = false)
 ;size(whatfile)
-
 ;fetchautoname(whatfile)
 ;swap(whatfile1, whatfile2, confirmation=false)
 ;bak(whatfile, whatbak)
-
 ;------------PATH-------------------------------------------------------
 ;nameonly(whatfile)
 ;dir(whatfile)
@@ -31,20 +28,21 @@
 ;FullPathFromLocal(whatfile)
 ;fullpathfromprocess(whatprocess)
 ;date()
-
 ;gettext(whatfile)
 ;appendtext(whattext, whatfile)
 ;writetext(whattext, whatfile, makebak="")
-
-
-
-
 ;-------------------------------------------------------------------
-class file {
-
+class filey {
 
 delete(whatfile){
 	filedelete, %whatfile%
+}
+
+open(whatfile){
+	if(FileExist(whatfile) ){
+		run, %whatfile%
+		return true
+	}
 }
 
 exist(whatfile){
@@ -56,11 +54,10 @@ exist(whatfile){
 		return false ;failure	
 	}
 }
+
 exists(whatfile){
 	return this.exist(whatfile)
 }
-
-
 ;returns true if the item is a folder, false if is a file
 isfolder(whatfile){
 	filegetattrib, theseattributes, %whatfile%
@@ -80,37 +77,61 @@ locked(whatfile){
 	return returnvalue
 }
 
-
-
 ;overwrite a file by default
 ;returns name of file if successful
 move(whatfile, whatdestination, overwrite=1){
-	if(this.isfolder(whatfile) ){
-		filemovedir, %whatfile%, %whatdestination%, %overwrite%
-		if(errorlevel)
-			return false
-		else
-			return whatdestination
+	if(!this.isfolder(whatfile)){
+		filemove, %whatfile%, %whatdestination%, %overwrite%
 	}else{
 		filemove, %whatfile%, %whatdestination%, %overwrite%
-		if(errorlevel)
-			return false
-		else
+	}
+	if(errorlevel){
+		return false
+	}else{
+		;for the return name, there are several complications
+		;whatdestination includes a custom filename
+		;whatdestination is just a directory, and we are copying whatfile using the same filename
+		;whatdestination could be a directory and could be the same as whatfile
+		if( this.isfolder(whatdestination)  ){		;does the destination include the whatfile folder?
+			if(path.name(whatdestination) = path.name(whatfile) ){	;the folder being moved retains it's original name
+				return whatdestination
+			}else{	;then the destination folder does not contain the file name
+				return whatdestination  . "\" . path.name(whatfile)
+			}
+		}else{		;whatdestination is a file so just return that, whatever it is
 			return whatdestination
+		}
 	}
 }
+
 
 ;overwrite a file by default
 ;returns name of new file if successful
 copy(whatfile, whatdestination, overwrite=1){
-	if(!this.isfolder(whatfile))
-		filecopy, %whatfile%, %whatdestination%, %overwrite%
-	else
+	if(!this.isfolder(whatfile)){
+		isfolder := true
+		filecopy, %whatfile%, %whatdestination%, %overwrite%	
+	}else{
+		isfile := true
 		filecopydir, %whatfile%, %whatdestination%, %overwrite%
-	if(errorlevel)
+	}
+	if(errorlevel){
 		return false
-	else
-		return whatdestination
+	}else{
+		;for the return name, there are several complications
+		;whatdestination includes a custom filename
+		;whatdestination is just a directory, and we are copying whatfile using the same filename
+		;whatdestination could be a directory and could be the same as whatfile
+		if( this.isfolder(whatdestination)  ){		;does the destination include the whatfile folder?
+			if(path.name(whatdestination) = path.name(whatfile) ){	;the folder being moved retains it's original name
+				return whatdestination
+			}else{	;then the destination folder does not contain the file name
+				return whatdestination  . "\" . path.name(whatfile)
+			}
+		}else{		;whatdestination is a file so just return that, whatever it is
+			return whatdestination
+		}
+	}
 }
 
 ;renames a file or folder
@@ -118,7 +139,6 @@ copy(whatfile, whatdestination, overwrite=1){
 rename(whatfile, whatnewname, overwrite=1){
 	return this.move(whatfile, whatnewname, overwrite)
 }
-
 
 ;if recurse is 1, the directory and all its contents will be deleted
 ;otherwise it will only delete an empty directory
@@ -198,8 +218,6 @@ swap(whatfile1, whatfile2, confirmation=false){
 	if(confirmation)
 		alert("Okay! The filenames were swapped")
 }
-
-
 ;create a backup file, autonaming the file if it exists
 ;returns the name of the bak file
 bak(whatfile, whatbak=""){
@@ -212,7 +230,6 @@ bak(whatfile, whatbak=""){
 	return whatbak
 }
 
-
 ;creates an autonamed duplicate of the file (creates a file copy with a new name)
 ;returns the name of the new file
 duplicate(whatfile){
@@ -223,8 +240,6 @@ duplicate(whatfile){
 	this.move(tempfile, newname)
 	return newname
 }
-
-
 ;This is like copy except that the new filename is autonamed.  Creates a new autonamed file.
 ;This is different than duplicate because it uses a new name instead of the original file's filename
 ;to start this, just specify whatfile; newfile is only used by the internal recursive loop
@@ -238,8 +253,6 @@ autoname(whatfile, newfile){
 	file.move(whatfile, newname)
 	return newname	
 }
-
-
 ;return the name of a filename that isn't taken - figure the new name by appending (1) or (2) to the filename
 ;loop to rename a file until it finds a numbered name that doesn't exist
 ;returns the new filename
@@ -267,9 +280,6 @@ fetchautoname(whatfile){
 	;now rename the file to the new name by going into recurse
 	return this.fetchautoname(newname)
 }
-
-
-
 ; Copy all files and folders inside a folder to a different folder
 ; Copies all files and folders matching SourcePattern into the folder named DestinationFolder and
 ; returns the number of files/folders that could not be copied.
@@ -287,48 +297,36 @@ CopyEverything(SourcePattern, DestinationFolder, DoOverwrite = false){
     }
     return ErrorCount
 }
-
-
-
-
 }	;end class file
-
-
 ;--------------PATH------------------------------------------------------------------------------------------------------------------------
 ;Consider a full path as c:\some path\folder\file.ext
 class path {
-
 ;swaps the nameonly
 swapnameonly(whatfile, whatnameonly){
 	newfile := this.dir(whatfile) . whatnameonly . this.ext(whatfile)
 	return newfile
 }
-
 ;returns: file
 nameonly(whatfile){
 	splitpath, whatfile,,,,thisnameonly
 	return thisnameonly
 }
-
 ;returns:   file.ext
 name(whatfile){
 	splitpath, whatfile,thisfilename
 	return thisfilename
 }
-
 ;returns .ext
 ext(whatfile){
 	splitpath, whatfile,,,thisextension
 	return thisextension	
 }
-
 ;returns:  c:\some path\folder
 ;(no trailing slash)
 dir(whatfile){
 	splitpath, whatfile,,thisdir
 	return thisdir
 }
-
 ;returns:   c:\some path\folder\file
 ;if no directory is specified, return blank
 pathname(whatfile){
@@ -339,8 +337,6 @@ pathname(whatfile){
 		thispath := this.nameonly(whatfile)
 	return thispath
 }
-
-
 ;return the full path of the file; we assume it is in a_workingdir unless another is specified
 FullPathFromLocal(whatfile, whatdefaultpath=""){
 	;see if there are any slashes in the path; if not, add the current directory to get the full path
@@ -360,7 +356,6 @@ FullPathFromLocal(whatfile, whatdefaultpath=""){
 		return thispath
 	}
 }
-
 ;return the full path of an executable from its process name (must include file extension)
 ;if the process isn't running, it will return blank.
 fullpathfromprocess(whatprocess){
@@ -369,17 +364,27 @@ fullpathfromprocess(whatprocess){
 }
 
 
+;fetches the full path of a file from its environmentally gotten name
+;if not an environmental, it returns emtpy
+;http://ahkscript.org/boards/viewtopic.php?p=48907&sid=be08c944ec8e4ff820310a35e8bc38d5#p48907
+pathfrompath(whatfile) {
+	; msdn.microsoft.com/en-us/library/bb773594(v=vs.85).aspx
+	VarSetCapacity(Buffer, 520, 0)
+	Buffer := whatfile
+	If DllCall("Shlwapi.dll\PathFindOnPath", "Str", Buffer, "Ptr", 0)
+	Return Buffer
+}
+
+
+
+
 ;create a precise time format useful for file-creation and easy to read
 date(){
 	FormatTime, thisdate,,yyyy-MM-dd-hhmmss
 	return thisdate
 }
-
 time(){
 	FormatTime, thisdate,,hhmmss
 	return thisdate
 }
-
-
 } ;end class path
-
