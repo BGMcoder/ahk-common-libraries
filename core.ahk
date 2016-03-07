@@ -1,15 +1,19 @@
 /*!
 	Library: core.ahk
-		version 1.0
-		Sunday, June 16, 2013
+		version 1.3
+		Sunday, March 06, 2016
 	Author: Brother Gabriel-Marie
 		an autohotkey inclusion with all the re-usable stuff
 	
 */
+
 ;HISTORY
-;version 1.1 : Tuesday, November 26, 2013 - added TrimMatch
+;version 1.3 : Sunday, March 06, 2016 : I don't remember - haha
+;version 1.2 : June 3, 2015 : tweaked alert() with wintitle(); removed gui_gettext and gui_settext to ui.ahk
+;version 1.1 : November 26, 2013 : added TrimMatch
 ;version 1.0 : June 16, 2013 : first release
 
+;FUNCTIONS
 ;alert(whatmessage, whaticon=0)
 ;enc(whattext)
 ;len(whattext)
@@ -19,21 +23,18 @@
 ;Count(whattext, findwhat)
 ;trimtrim(whatstring, trimhow=0)
 ;TrimMatch(whatstring, trimthis, rightside=1, casesensitive=0)
-;ReplaceString(whattext, replacethis, withthis="", replaceall=0, casesensitive=1, isregex=0)
+;ReplaceString(whattext, replacethis, withthis="", replaceall=1, casesensitive=1, isregex=0)
 ;ReplaceChars(whatstring, whatchars, replacement="", caseon=0)
 ;EscapeRegex(whatstring)
 ;Rand( a=0.0, b=1 )
-
 ;case(whattext, how)
 ;SetCase(caseon)
-
 ;GetAppName(whatfile=a_scriptname)
 ;slash(whatstring, how=true, slashtype=false)
 ;RunIt(whatprogram, whatparams="", whatdir="", whaterrormessage="", whaterroricon="")
 ;GetTheDate(how="")
 
-;gui_getValue(whatcontrol)
-;gui_setValue(whatvalue, whatcontrol)
+
 
 ;global string variables
 vowels 		:= "aeiou"
@@ -45,9 +46,11 @@ punctuation := "`.`,`;"
 a_doublequote := chr(34)
 a_singlequote := chr(39)
 validchars	:= alphabet . numbers . "#_@$"
-regexchars	:= "\`.*?+[`{|()^$"
-g_delimiter := ""
-
+regexchars	:= "\.*?+[]{}|()^$"
+g_delimiter := "#!#"
+s_delimiter := "|^^^^|"
+nonfilenamechars := "/\:*?""<>|" 
+ 
 /*!
 	Function: alert(whatmessage, whaticon="", whattitle="", whattimeout="")
 		A Wrapper for messagebox with intuitive parameters
@@ -61,8 +64,8 @@ g_delimiter := ""
 	Notes: If the original window is topmost, this messagebox will also be topmost
 */
 alert(whatmessage, whaticon="", whattitle="", whattimeout=""){
-	if(!thistitle){	;use the apptitle variable if it is defined
-		thistitle := apptitle
+	if(!whattitle){	;use the apptitle variable if it is defined
+		wingettitle, whattitle, A
 	}
 	if(whaticon = "asterisk")
 		theseoptions := 64
@@ -86,8 +89,6 @@ alert(whatmessage, whaticon="", whattitle="", whattimeout=""){
 	;the "options" number must be a forced expression
 	msgbox, % theseoptions, %whattitle%, %whatmessage%, %whattimeout%			;%
 }
-
-
 
 
 ;simply enclose the text in double-quotes
@@ -145,6 +146,7 @@ left(whattext, numchars=1, shift=false){
 	return thisstring
 }
 
+
 ;shift=false : fetch the characters from the middle of a string
 ;shift=true : remove the characters from the middle of a string (same as substr)
 mid(whattext, startindex, numchars=1, shift=false){
@@ -157,6 +159,7 @@ mid(whattext, startindex, numchars=1, shift=false){
 	}
 	return thisstring
 }
+
 
 ;get the position of a string within a string
 pos(whattext, findthis, leftright="", offset=""){
@@ -196,9 +199,9 @@ TrimMatch(whatstring, trimthis, rightside=1, casesensitive=0){
 		}else{
 			return whatstring	
 		}
-
 	}
 }
+
 
 ;remove all whitespace from the start or tail of a string
 ;trimhow = 0 or "" will trim both sides
@@ -246,6 +249,7 @@ SetCase(caseon){
 	return currentcase
 }
 
+
 StringMatch(whatword1, whatword2, caseon=0){
 	alert(whatword1 . "`r" . whatword2)
 	if(caseon)
@@ -254,6 +258,7 @@ StringMatch(whatword1, whatword2, caseon=0){
 		matchingwords := regexmatch(whatword1, "i)" . whatword2)
 	return matchingwords
 }
+
 
 ;replace instances of one string with another
 ReplaceString(whattext, replacethis, withthis="", replaceall=1, caseon=0, isregex=0){
@@ -271,7 +276,6 @@ ReplaceString(whattext, replacethis, withthis="", replaceall=1, caseon=0, isrege
 }
 
 
-
 ;replace all instances of a single glyph within the string
 ReplaceChars(whatstring, whatchars, replacement="", caseon=0){
 	currentstate := SetCase(caseon)
@@ -286,6 +290,7 @@ ReplaceChars(whatstring, whatchars, replacement="", caseon=0){
 	SetCase(currentstate)
 	return newstring
 }
+
 
 ;  escape any regex characters
 ; allowchars = a string of characters that you don't want to s
@@ -304,6 +309,7 @@ EscapeRegex(whatstring, allowchars=""){
 	return safestring
 }
 
+
 ; Random command wrapper by [VxE]
 ; http://www.autohotkey.com/forum/viewtopic.php?p=333325#333325
 Rand( a=0.0, b=1 ) {
@@ -311,6 +317,7 @@ Rand( a=0.0, b=1 ) {
    Else Random,r,a,b
    Return r
 }
+
 
 ;add/remove trailing backslash
 ;Adds a slash if there isn't one (if there are two slashes, "slash" won't change anything)
@@ -337,6 +344,7 @@ slash(whatstring, how=true, whichslash=false){
 	}
 	return thisstring
 }
+
 
 ;return the name of the application without any path or extension
 GetAppName(whatfile=""){
@@ -382,13 +390,4 @@ makeVarNameValid(whatname){
 	}
 	return validname	
 }	
-
-
-;-------------------------------------------------------------------
-
-;fetches the value of a control
-gui_getValue(whatcontrol){
-	guicontrolget, thisvalue, ,%whatcontrol%
-	return thisvalue
-}
 
